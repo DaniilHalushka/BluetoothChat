@@ -33,20 +33,42 @@ class AndroidBluetoothController(
     override val pairedDevices: StateFlow<List<BluetoothDeviceDomain>>
         get() = _pairedDevices.asStateFlow()
 
+    private val foundDeviceReceiver = FoundDeviceReceiver { device ->
+        _scannedDevices.update { devices ->
+            val newDevice = device.toBluetoothDeviceDomain()
+            if (newDevice in devices) devices else devices + newDevice
+        }
+    }
+
     init {
         updatePairedDevices()
     }
 
     override fun startDiscovery() {
-        TODO("Not yet implemented")
+        if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
+            return
+        }
+
+        context.registerReceiver(
+            foundDeviceReceiver,
+            android.content.IntentFilter(android.bluetooth.BluetoothDevice.ACTION_FOUND)
+        )
+
+        updatePairedDevices()
+
+        bluetoothAdapter?.startDiscovery()
     }
 
     override fun stopDiscovery() {
-        TODO("Not yet implemented")
+        if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
+            return
+        }
+
+        bluetoothAdapter?.cancelDiscovery()
     }
 
     override fun release() {
-        TODO("Not yet implemented")
+        context.unregisterReceiver(foundDeviceReceiver)
     }
 
 
