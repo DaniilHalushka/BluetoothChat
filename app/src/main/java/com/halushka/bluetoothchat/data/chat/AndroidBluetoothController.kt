@@ -3,14 +3,24 @@ package com.halushka.bluetoothchat.data.chat
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothServerSocket
+import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.pm.PackageManager
 import com.halushka.bluetoothchat.domain.chat.BluetoothController
 import com.halushka.bluetoothchat.domain.chat.BluetoothDeviceDomain
+import com.halushka.bluetoothchat.domain.chat.ConnectionResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
+import java.io.IOException
+import java.util.UUID
 
 @SuppressLint("MissingPermission")
 class AndroidBluetoothController(
@@ -39,6 +49,9 @@ class AndroidBluetoothController(
             if (newDevice in devices) devices else devices + newDevice
         }
     }
+
+    private var currentServerSocket: BluetoothServerSocket? = null
+    private var currentClientSocket: BluetoothSocket? = null
 
     init {
         updatePairedDevices()
@@ -69,6 +82,7 @@ class AndroidBluetoothController(
 
     override fun release() {
         context.unregisterReceiver(foundDeviceReceiver)
+        closeConnection()
     }
 
 
@@ -88,4 +102,74 @@ class AndroidBluetoothController(
         return context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     }
 
+    override fun closeConnection() {
+        currentServerSocket?.close()
+        currentClientSocket?.close()
+        currentClientSocket = null
+        currentServerSocket = null
+    }
+
+    override fun connectToDevice(device: BluetoothDeviceDomain): Flow<ConnectionResult> {
+        return flow {
+            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
+                throw SecurityException("No BLUETOOTH_CONNECT permission")
+            }
+
+            currentClientSocket = bluetoothAdapter
+                ?.getRemoteDevice(device.address)
+                ?.createRfcommSocketToServiceRecord(
+                    UUID.fromString(SERVICE_UUID)
+                )
+
+            stopDiscovery()
+
+            currentClientSocket?.let { socket ->
+                try {
+                    socket.connect()
+                    emit(ConnectionResult.ConnectionEstablished)
+                } catch (e: IOException) {
+                    socket.close()
+                    currentClientSocket = null
+                    emit(ConnectionResult.Error(e.message ?: "Connection failed"))
+                }
+            }
+        }.onCompletion {
+            closeConnection()
+        }.flowOn(Dispatchers.IO)
+    }
+
+    override fun startBluetoothServer(): Flow<ConnectionResult> {
+        return flow {
+            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
+                throw SecurityException("No BLUETOOTH_CONNECT permission")
+            }
+
+            currentServerSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord(
+                "chat_service",
+                UUID.fromString(SERVICE_UUID)
+            )
+
+            var shouldLoop = true
+            while (shouldLoop) {
+                currentClientSocket = try {
+                    currentServerSocket?.accept()
+                } catch (e: IOException) {
+                    shouldLoop = false
+                    null
+                }
+
+                emit(ConnectionResult.ConnectionEstablished)
+
+                currentServerSocket?.let {
+                    currentClientSocket?.close()
+                }
+            }
+        }.onCompletion {
+            closeConnection()
+        }.flowOn(Dispatchers.IO)
+    }
+
+    companion object {
+        const val SERVICE_UUID = "00001101-0000-1000-8000-00805F9B34FB"
+    }
 }
