@@ -25,21 +25,26 @@ import com.halushka.bluetoothchat.presentation.BluetoothUIState
 fun DeviceScreen(
     state: BluetoothUIState,
     onStartScan: () -> Unit,
-    onStopScan: () -> Unit
+    onStopScan: () -> Unit,
+    onDeviceClick: (BluetoothDevice) -> Unit,
+    onStartServer: () -> Unit,
 ) {
-    BluetoothDeviceList(
-        pairedDevices = state.pairedDevices,
-        scannedDevices = state.scannedDevices,
-        onClick = {},
-        modifier = Modifier.fillMaxWidth()
-    )
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
+        BluetoothDeviceList(
+            pairedDevices = state.pairedDevices,
+            scannedDevices = state.scannedDevices,
+            onClick = onDeviceClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             Button(onClick = onStartScan) {
@@ -49,9 +54,14 @@ fun DeviceScreen(
             Button(onClick = onStopScan) {
                 Text(stringResource(R.string.stop_scan))
             }
+
+            Button(onClick = onStartServer) {
+                Text(stringResource(R.string.start_server))
+            }
         }
     }
 }
+
 
 @Composable
 fun BluetoothDeviceList(
