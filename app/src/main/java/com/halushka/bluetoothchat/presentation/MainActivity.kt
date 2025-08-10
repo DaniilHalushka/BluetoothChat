@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.halushka.bluetoothchat.R
+import com.halushka.bluetoothchat.presentation.components.ChatScreen
 import com.halushka.bluetoothchat.presentation.components.DeviceScreen
 import com.halushka.bluetoothchat.ui.theme.BluetoothChatTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -113,6 +114,14 @@ class MainActivity : ComponentActivity() {
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
+                        }
+
+                        state.isConnected -> {
+                            ChatScreen(
+                                state = state,
+                                onDisconnect = viewModel::disconnectFromDevice,
+                                onSendMessage = viewModel::sendMessage
+                            )
                         }
 
                         else -> {
