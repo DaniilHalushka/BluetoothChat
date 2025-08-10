@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,7 +31,8 @@ class BluetoothViewModel @Inject constructor(
     ) { scannedDevices, pairedDevices, state ->
         state.copy(
             scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices
+            pairedDevices = pairedDevices,
+            messages = if (state.isConnected) state.messages else emptyList()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
 
@@ -103,6 +105,13 @@ class BluetoothViewModel @Inject constructor(
                     }
                 }
 
+                is ConnectionResult.TransferSucceeded -> {
+                    _state.update {
+                        it.copy(
+                            messages = it.messages + result.message
+                        )
+                    }
+                }
             }
         }.catch { throwable ->
             bluetoothController.closeConnection()
@@ -114,6 +123,20 @@ class BluetoothViewModel @Inject constructor(
             }
         }
             .launchIn(viewModelScope)
+    }
+
+    fun sendMessage(message: String) {
+        viewModelScope.launch {
+            val bluetoothMessage = bluetoothController.trySendMessage(message)
+            if (bluetoothMessage != null) {
+                _state.update {
+                    it.copy(
+                        messages = it.messages + bluetoothMessage
+                    )
+                }
+            }
+        }
+
     }
 
     override fun onCleared() {
