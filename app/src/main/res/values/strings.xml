@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Bluetooth Chat</string>
+    <string name="start_scan">Start scan</string>
+    <string name="stop_scan">Stop scan</string>
+    <string name="paired_devices">Paired devices</string>
+    <string name="scanned_devices">Scanned devices</string>
+    <string name="no_paired_devices">No paired devices</string>
+    <string name="no_name">(No name)</string>
+    <string name="connecting">Connecting…</string>
+    <string name="you_re_connected">You\'re connected!</string>
+    <string name="start_server">Start server</string>
 </resources>
