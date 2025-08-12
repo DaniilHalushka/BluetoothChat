@@ -14,7 +14,7 @@ BluetoothChat is a simple Android application written entirely in Kotlin that en
 ## Getting Started
 
 1. Clone the repository: git clone https://github.com/DaniilHalushka/BluetoothChat.git
-Open the project in Android Studio and allow it to sync.
+   Open the project in Android Studio and allow it to sync.
 
 2. Build and run the app on two Android devices (or emulators) with Bluetooth enabled.
 
